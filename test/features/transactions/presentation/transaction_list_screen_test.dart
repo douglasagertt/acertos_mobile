@@ -17,7 +17,7 @@ void main() {
   testWidgets('adding an expense shows it in the list and hides the empty state', (tester) async {
     await tester.pumpWidget(buildApp());
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Despesa'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Despesa'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('expenseNameField')), 'Mercado');
@@ -34,7 +34,7 @@ void main() {
   testWidgets('submitting with an empty description does not add a row', (tester) async {
     await tester.pumpWidget(buildApp());
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Despesa'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Despesa'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('valueField')), '50,00');
@@ -49,7 +49,7 @@ void main() {
   testWidgets('deleting a row removes it from the list', (tester) async {
     await tester.pumpWidget(buildApp());
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Despesa'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Despesa'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expenseNameField')), 'Farmácia');
     await tester.enterText(find.byKey(const Key('valueField')), '20,00');
@@ -68,7 +68,7 @@ void main() {
   testWidgets('changing owner to Compartilhado checks the shared box', (tester) async {
     await tester.pumpWidget(buildApp());
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Despesa'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Despesa'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expenseNameField')), 'Aluguel');
     await tester.enterText(find.byKey(const Key('valueField')), '100,00');
@@ -97,7 +97,7 @@ void main() {
     // grand total, Douglas deve pagar) reads zero — 7 values total.
     expect(find.text('R\$ 0,00'), findsNWidgets(7));
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Despesa'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Despesa'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expenseNameField')), 'Mercado');
     await tester.enterText(find.byKey(const Key('valueField')), '50,00');

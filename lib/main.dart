@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/transactions/presentation/transaction_list_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await pdfrxFlutterInitialize();
   runApp(const ProviderScope(child: AcertosApp()));
 }
 

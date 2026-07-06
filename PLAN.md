@@ -233,8 +233,23 @@ Font: Inter (`google_fonts`), matching `fontFamily.sans` in the web Tailwind con
    `transactionsProvider` reactively. Verified live-update via both a widget test and a real
    screenshot with seeded sample data (all 4 owner types + a negative/ignored value) — the shared
    half-split arithmetic, negative-value sign, and dark highlight card all render correctly.
-6. PDF import: file picker → text extraction → parsing → populate transaction list, with the
-   same warnings-surface behavior as the web app.
+6. ~~PDF import: file picker → text extraction → parsing → populate transaction list, with the
+   same warnings-surface behavior as the web app~~ — done (2026-07-06). `pdf_reader.dart` is a
+   pure, synchronous port of `pdf_reader.py` (`parseInvoiceLines(List<String>)`), separated from
+   `pdf_text_extractor.dart` (the actual pdfrx I/O) for testability. Includes the pdfrx-specific
+   two-line date+description/digits+value pairing fix identified in the Phase 0 spike (annuity/
+   installment entries), without which they'd be silently dropped.
+   **Validated against the real invoice fixture end-to-end, matching a fresh Python reference run
+   exactly**: 80/80 transactions, invoice total R$15.568,34, Bruna R$11.039,43, Douglas
+   R$4.528,91 — both annuity entries present and correctly paired. Confirmed twice: once via
+   `flutter test` (manual `PDFIUM_PATH`, not auto-fetched — see
+   `pdf_reader_fixture_test.dart`'s header for why it doesn't download pdfium itself), and once by
+   temporarily wiring the real fixture into the real compiled app on startup and screenshotting
+   the populated list + summary panel through the actual `pdfrxFlutterInitialize()` production
+   path (not just the test path) — reverted before commit.
+   Toolbar re-ordered to match the web's hierarchy: "Importar PDF" is now the primary filled
+   button, "Despesa" is outlined/secondary (previously the reverse, since import didn't exist
+   yet).
 7. PDF export: generate the settlement PDF, save + share (share sheet).
 8. History: local list of past settlements, regenerate/re-share old PDFs.
 9. Polish pass: empty states, loading states, error handling for malformed PDFs.

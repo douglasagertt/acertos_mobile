@@ -19,7 +19,12 @@ enum Owner {
   );
 }
 
+const cardGroupBruna = 'Cartão Bruna Hentschel';
+const cardGroupVirtualBruna = 'Cartão virtual Bruna Hentschel';
 const cardGroupDouglas = 'Cartão adicional Douglas A Pereira';
+
+/// Mirrors `CARD_HEADERS` in acertos/src/core/pdf_reader.py.
+const cardHeaders = [cardGroupBruna, cardGroupVirtualBruna, cardGroupDouglas];
 
 /// Mirrors `owner_from_card_group()` in models.py.
 Owner ownerFromCardGroup(String cardGroup) {
