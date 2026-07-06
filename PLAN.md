@@ -217,8 +217,15 @@ Font: Inter (`google_fonts`), matching `fontFamily.sans` in the web Tailwind con
    + app icon/splash from Entre Dois assets.
 3. ~~Port `Transaction`/`Totals`/`Owner` models + `calculate_totals()`, with unit tests ported
    from `web/e2e/tests/*.spec.ts`~~ — done (2026-07-06).
-4. Transaction list screen: view/edit owner, shared flag, value, obs; manual "add expense" flow
-   (port of `AddExpenseDialog.tsx`); delete row.
+4. ~~Transaction list screen: view/edit owner, shared flag, value, obs; manual "add expense" flow
+   (port of `AddExpenseDialog.tsx`); delete row~~ — done (2026-07-06). Card layout instead of a
+   literal table port (mobile-appropriate for narrow screens); drag-to-reorder via
+   `ReorderableListView`. Riverpod `NotifierProvider<TransactionsNotifier, List<Transaction>>`
+   holds session state. Minimal Material 3 theme + Inter added
+   (`lib/core/theme/app_theme.dart`) to support owner row colors — full icon/splash generation
+   still deferred to the polish pass (step 9). Verified against the real compiled Linux desktop
+   binary (screenshots), not just widget tests — caught and fixed one real gap this way: the
+   `installment` field wasn't rendered anywhere in the row.
 5. Summary panel (port of `SummaryPanel.tsx`): live totals as transactions change.
 6. PDF import: file picker → text extraction → parsing → populate transaction list, with the
    same warnings-surface behavior as the web app.

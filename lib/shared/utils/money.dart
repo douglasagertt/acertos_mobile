@@ -20,3 +20,8 @@ String formatMoney(double value) {
 
   return '${isNegative ? '-' : ''}R\$ $buffer,$decPart';
 }
+
+/// A transaction value shown as "—" when zero, matching `displayValue` in
+/// acertos/web/src/components/TransactionTable.tsx's SortableRow.
+String displayValue(double value) => value == 0 ? '—' : formatMoney(value);
+
