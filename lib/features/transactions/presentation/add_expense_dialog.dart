@@ -91,6 +91,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                   child: DropdownButtonFormField<Owner>(
                     key: const Key('ownerField'),
                     initialValue: _owner,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Responsável'),
                     items: [
                       for (final o in Owner.values) DropdownMenuItem(value: o, child: Text(o.label)),
@@ -106,6 +107,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _month,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Mês'),
                     items: [
                       for (final entry in monthsPt.entries)

@@ -258,6 +258,40 @@ Font: Inter (`google_fonts`), matching `fontFamily.sans` in the web Tailwind con
 10. New Supabase project, mirror `entre_dois`'s auth/household/realtime patterns for a 2-person
     shared invoice. Revisit the data model then — don't design the sync schema now.
 
+## Real Android device validated (2026-07-06)
+
+Everything above had only been run on Linux desktop until this point. Ran the app on a real
+connected phone (Samsung, Android 15/API 35) for the first time and hit two real, device-only
+bugs neither desktop testing nor widget tests surfaced:
+
+- **Android build failed out of the box**: `file_picker` (11.0.2, current as of this writing)
+  fails to compile under Android Gradle Plugin 9.0+ — `cannot find symbol: class
+  FilePickerPlugin`. This is a known, currently-unfixed upstream issue (AGP 9 dropped support for
+  plugins that apply the Kotlin Gradle Plugin the old way, and most of the plugin ecosystem,
+  including file_picker, hasn't migrated to Flutter's new "Built-in Kotlin" model yet — see
+  github.com/miguelpruivo/flutter_file_picker/issues/1942). `flutter create` picks the latest AGP
+  by default (9.0.1), which is too new for the current plugin ecosystem. **Fix**: pinned
+  `android/settings.gradle.kts` to AGP `8.11.1` + Kotlin `2.2.20` — below AGP 9 (avoids the
+  file_picker break) but at/above Flutter's own stated minimums for this Flutter version. Revisit
+  this pin once file_picker (and the broader plugin ecosystem) migrates.
+- **Bottom summary card obscured by Android's edge-to-edge navigation bar**: the "Douglas deve
+  pagar" card was partially covered by the phone's gesture nav bar — invisible on desktop, which
+  has no such system UI overlay. Fixed with `SafeArea(top: false, child: ...)` wrapping the
+  Scaffold body (top:false since the AppBar already handles the status bar).
+- **`RenderFlex` overflow on the owner dropdown, real device only**: none of the 3
+  `DropdownButtonFormField<Owner>`/`<int>` usages had `isExpanded: true` set, so the widest
+  content (specifically "Compartilhado", the longest owner label) overflowed its `Expanded`
+  allocation by a few pixels on the phone's actual width — a very well-known Flutter gotcha that
+  happened not to trigger during desktop-window testing at a wider size. Fixed by adding
+  `isExpanded: true` to all three (`add_expense_dialog.dart`'s Responsável and Mês dropdowns,
+  `transaction_row_card.dart`'s owner dropdown).
+
+Both bugs were caught by actually running on hardware and interacting via real touch input
+(`adb shell input tap/text`, safe — scoped to the phone over USB, unlike synthetic input on the
+shared Linux desktop) and `adb shell screencap`, not by widget tests or desktop screenshots. Full
+manual-add-expense flow (open dialog → fill fields → submit → edit owner incl. the longest label
+→ auto-check shared → delete) verified working end-to-end on the physical device after the fixes.
+
 ## Testing strategy
 
 - Unit-test `calculate_totals()` directly against the same scenarios the Playwright e2e suite

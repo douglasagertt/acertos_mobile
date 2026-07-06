@@ -17,7 +17,8 @@ class TransactionListScreen extends ConsumerStatefulWidget {
   const TransactionListScreen({super.key});
 
   @override
-  ConsumerState<TransactionListScreen> createState() => _TransactionListScreenState();
+  ConsumerState<TransactionListScreen> createState() =>
+      _TransactionListScreenState();
 }
 
 class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
@@ -30,79 +31,88 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final totals = ref.watch(totalsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Acertos'),
-        centerTitle: false,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: AppColors.lavender600),
-                        onPressed: _importing ? null : _handleImportPdf,
-                        icon: _importing
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.upload_file, size: 16),
-                        label: const Text('Importar PDF'),
-                      ),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.lavender600,
-                          side: const BorderSide(color: AppColors.lavender600),
+      appBar: AppBar(title: const Text('Acertos'), centerTitle: false),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.lavender600,
+                          ),
+                          onPressed: _importing ? null : _handleImportPdf,
+                          icon: _importing
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.upload_file, size: 16),
+                          label: const Text('Importar PDF'),
                         ),
-                        onPressed: () async {
-                          final added = await showAddExpenseDialog(context);
-                          if (added != null) notifier.add(added);
-                        },
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Despesa'),
-                      ),
-                    ],
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.lavender600,
+                            side: const BorderSide(
+                              color: AppColors.lavender600,
+                            ),
+                          ),
+                          onPressed: () async {
+                            final added = await showAddExpenseDialog(context);
+                            if (added != null) notifier.add(added);
+                          },
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Despesa'),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                TextButton.icon(
-                  onPressed: transactions.isEmpty ? null : () => _confirmClear(context, notifier),
-                  icon: const Icon(Icons.delete_sweep_outlined, size: 16),
-                  label: const Text('Limpar'),
-                ),
-              ],
+                  TextButton.icon(
+                    onPressed: transactions.isEmpty
+                        ? null
+                        : () => _confirmClear(context, notifier),
+                    icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                    label: const Text('Limpar'),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: transactions.isEmpty
-                ? const _EmptyState()
-                : ReorderableListView.builder(
-                    buildDefaultDragHandles: false,
-                    padding: const EdgeInsets.only(bottom: 12),
-                    itemCount: transactions.length,
-                    onReorderItem: notifier.reorder,
-                    itemBuilder: (context, index) {
-                      final t = transactions[index];
-                      return TransactionRowCard(
-                        key: ValueKey(t.id),
-                        transaction: t,
-                        index: index,
-                        onUpdate: notifier.update,
-                        onDelete: notifier.remove,
-                      );
-                    },
-                  ),
-          ),
-          SummaryPanel(totals: totals),
-        ],
+            Expanded(
+              child: transactions.isEmpty
+                  ? const _EmptyState()
+                  : ReorderableListView.builder(
+                      buildDefaultDragHandles: false,
+                      padding: const EdgeInsets.only(bottom: 12),
+                      itemCount: transactions.length,
+                      onReorderItem: notifier.reorder,
+                      itemBuilder: (context, index) {
+                        final t = transactions[index];
+                        return TransactionRowCard(
+                          key: ValueKey(t.id),
+                          transaction: t,
+                          index: index,
+                          onUpdate: notifier.update,
+                          onDelete: notifier.remove,
+                        );
+                      },
+                    ),
+            ),
+            SummaryPanel(totals: totals),
+          ],
+        ),
       ),
     );
   }
@@ -126,7 +136,12 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         builder: (context) => AlertDialog(
           title: const Text('Erro ao importar PDF'),
           content: Text(parsed.warnings.join('\n')),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
       return;
@@ -138,7 +153,9 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     if (existing.isNotEmpty) {
       final replace = await _confirmReplaceOrAppend(existing.length);
       if (!mounted || replace == null) return;
-      notifier.replaceAll(replace ? parsed.transactions : [...existing, ...parsed.transactions]);
+      notifier.replaceAll(
+        replace ? parsed.transactions : [...existing, ...parsed.transactions],
+      );
     } else {
       notifier.replaceAll(parsed.transactions);
     }
@@ -151,15 +168,22 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         builder: (context) => AlertDialog(
           title: const Text('PDF importado com avisos'),
           content: Text(parsed.warnings.join('\n')),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
       if (!mounted) return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${parsed.transactions.length} transações importadas')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${parsed.transactions.length} transações importadas'),
+      ),
+    );
   }
 
   Future<bool?> _confirmReplaceOrAppend(int existingCount) {
@@ -167,25 +191,45 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Já existem $existingCount transações'),
-        content: const Text('Substituir pelos dados do novo PDF ou adicionar às existentes?'),
+        content: const Text(
+          'Substituir pelos dados do novo PDF ou adicionar às existentes?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Adicionar')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Substituir')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Adicionar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Substituir'),
+          ),
         ],
       ),
     );
   }
 
-  Future<void> _confirmClear(BuildContext context, TransactionsNotifier notifier) async {
+  Future<void> _confirmClear(
+    BuildContext context,
+    TransactionsNotifier notifier,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remover todas as transações?'),
         content: const Text('Essa ação não pode ser desfeita.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Remover')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remover'),
+          ),
         ],
       ),
     );
@@ -213,7 +257,10 @@ class _EmptyState extends StatelessWidget {
             child: const Text('📄', style: TextStyle(fontSize: 24)),
           ),
           const SizedBox(height: 12),
-          const Text('Nenhuma transação', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text(
+            'Nenhuma transação',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
           const Text(
             'Importe uma fatura PDF ou adicione uma despesa',

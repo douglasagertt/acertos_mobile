@@ -105,6 +105,7 @@ class _TransactionRowCardState extends State<TransactionRowCard> {
                   key: ValueKey('owner-${t.id}'),
                   initialValue: t.owner,
                   isDense: true,
+                  isExpanded: true,
                   decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
                   items: [
                     for (final o in Owner.values)
