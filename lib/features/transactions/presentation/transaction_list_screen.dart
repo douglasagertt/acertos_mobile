@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../settlement/presentation/summary_panel.dart';
+import '../../settlement/totals_provider.dart';
 import '../providers/transactions_provider.dart';
 import 'add_expense_dialog.dart';
 import 'widgets/transaction_row_card.dart';
@@ -16,6 +18,7 @@ class TransactionListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transactions = ref.watch(transactionsProvider);
     final notifier = ref.read(transactionsProvider.notifier);
+    final totals = ref.watch(totalsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -66,6 +69,7 @@ class TransactionListScreen extends ConsumerWidget {
                     },
                   ),
           ),
+          SummaryPanel(totals: totals),
         ],
       ),
     );

@@ -46,9 +46,13 @@ class AppColors {
   static const cream100 = Color(0xFFF5EDDF);
   static const cream200 = Color(0xFFEFE5D4);
   static const cream300 = Color(0xFFD4C9B8);
+  static const cream500 = Color(0xFF9A9390);
   static const lavender600 = Color(0xFF8B80BF);
   static const lavender700 = Color(0xFF7872AE);
   static const sage500 = Color(0xFF50663F);
+  // Brand accent green from the Entre Dois logo — distinct from the sage row
+  // scale, used for emphasis (e.g. the grand-total metric in SummaryPanel).
+  static const sageAccent = Color(0xFF5A8A5A);
   static const charcoal800 = Color(0xFF1C1917);
   static const charcoal500 = Color(0xFF564F48);
   static const charcoal400 = Color(0xFF847C74);

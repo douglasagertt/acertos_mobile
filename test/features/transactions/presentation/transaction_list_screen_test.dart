@@ -27,7 +27,8 @@ void main() {
 
     expect(find.text('Nenhuma transação'), findsNothing);
     expect(find.text('Mercado'), findsOneWidget);
-    expect(find.text('R\$ 50,00'), findsOneWidget);
+    // Row value + SummaryPanel's "Cartão Bruna" + "Total" (default owner is Bruna).
+    expect(find.text('R\$ 50,00'), findsNWidgets(3));
   });
 
   testWidgets('submitting with an empty description does not add a row', (tester) async {
@@ -87,5 +88,26 @@ void main() {
 
     final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
     expect(checkbox.value, isTrue);
+  });
+
+  testWidgets('summary panel reflects totals live as transactions change', (tester) async {
+    await tester.pumpWidget(buildApp());
+
+    // Empty state: every metric (Bruna, Douglas, shared total/half, ignored,
+    // grand total, Douglas deve pagar) reads zero — 7 values total.
+    expect(find.text('R\$ 0,00'), findsNWidgets(7));
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Despesa'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('expenseNameField')), 'Mercado');
+    await tester.enterText(find.byKey(const Key('valueField')), '50,00');
+    await tester.tap(find.widgetWithText(FilledButton, 'Adicionar'));
+    await tester.pumpAndSettle();
+
+    // Default owner is Bruna: the row's own value, "Cartão Bruna" and
+    // "Total" all read 50,00; "Douglas deve pagar" stays untouched at 0,00.
+    expect(find.text('R\$ 50,00'), findsNWidgets(3));
+    // Douglas, shared total, shared half, ignored, Douglas deve pagar.
+    expect(find.text('R\$ 0,00'), findsNWidgets(5));
   });
 }

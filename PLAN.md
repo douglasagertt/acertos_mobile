@@ -226,7 +226,13 @@ Font: Inter (`google_fonts`), matching `fontFamily.sans` in the web Tailwind con
    still deferred to the polish pass (step 9). Verified against the real compiled Linux desktop
    binary (screenshots), not just widget tests — caught and fixed one real gap this way: the
    `installment` field wasn't rendered anywhere in the row.
-5. Summary panel (port of `SummaryPanel.tsx`): live totals as transactions change.
+5. ~~Summary panel (port of `SummaryPanel.tsx`): live totals as transactions change~~ — done
+   (2026-07-06). Reflowed as a fixed bottom panel (`Wrap` of metrics + the dark "Douglas deve
+   pagar" card) instead of the desktop's 270px sidebar — no room for a side panel at phone width.
+   `totalsProvider` (`lib/features/settlement/totals_provider.dart`) derives `Totals` from
+   `transactionsProvider` reactively. Verified live-update via both a widget test and a real
+   screenshot with seeded sample data (all 4 owner types + a negative/ignored value) — the shared
+   half-split arithmetic, negative-value sign, and dark highlight card all render correctly.
 6. PDF import: file picker → text extraction → parsing → populate transaction list, with the
    same warnings-surface behavior as the web app.
 7. PDF export: generate the settlement PDF, save + share (share sheet).
