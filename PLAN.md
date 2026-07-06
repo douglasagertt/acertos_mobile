@@ -139,9 +139,19 @@ class Totals {
 
 ## Business logic to port
 
-- **`calculator.py` → `lib/features/settlement/calculate_totals.dart`**: pure function, trivial
-  and low-risk port. Do this right after the data model — it's the one piece of logic with
-  existing test coverage to mirror (see Testing below).
+- **`calculator.py` → `lib/features/settlement/calculate_totals.dart`** — DONE (2026-07-06), see
+  `lib/shared/models/{owner,transaction,totals}.dart`, `lib/shared/utils/money.dart`,
+  `lib/features/settlement/calculate_totals.dart`, tests in
+  `test/features/settlement/calculate_totals_test.dart` (mirrors the 4 e2e spec scenarios: shared-
+  split, extorno, reconciliation, delete-row, using synthetic fixtures + `round2()`-derived
+  expectations rather than hardcoded numbers, matching the original suite's style).
+  **Noted quirk (pre-existing in the Python original, faithfully preserved, not fixed)**: because
+  both halves of a shared/`Compartilhado` value are rounded independently
+  (`round2(v/2)` for Bruna *and* for Douglas), an odd-cent value like `89.99` rounds each half to
+  `45.00`, so the two halves sum to `90.00` — a 1-cent drift the production e2e suite has never
+  caught because it only tests fresh imports (nothing pre-marked as shared). Worth knowing if a
+  future reconciliation bug report ever traces back to a shared transaction with an odd number of
+  cents.
 - **`pdf_reader.py` → `lib/features/invoice_import/`**: the regex parsing (date/value/installment
   detection, card-group headers, the "pagamento de fatura nets against last month's total" rule,
   the pending-description-on-previous-line handling) ports fairly directly to Dart `RegExp` once
@@ -205,8 +215,8 @@ Font: Inter (`google_fonts`), matching `fontFamily.sans` in the web Tailwind con
 2. ~~`flutter create --org com.example --project-name acertos_mobile .`~~ — done (org left as
    `com.example` for now, see Open Questions). Still to do: wire up Material 3 theme + Inter font
    + app icon/splash from Entre Dois assets.
-3. Port `Transaction`/`Totals`/`Owner` models + `calculate_totals()`, with unit tests ported from
-   `web/e2e/tests/*.spec.ts` (see Testing).
+3. ~~Port `Transaction`/`Totals`/`Owner` models + `calculate_totals()`, with unit tests ported
+   from `web/e2e/tests/*.spec.ts`~~ — done (2026-07-06).
 4. Transaction list screen: view/edit owner, shared flag, value, obs; manual "add expense" flow
    (port of `AddExpenseDialog.tsx`); delete row.
 5. Summary panel (port of `SummaryPanel.tsx`): live totals as transactions change.
