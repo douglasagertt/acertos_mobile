@@ -1,9 +1,14 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:printing/printing.dart';
 
+import '../../../core/constants/months_pt.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/models/owner.dart';
 import '../../invoice_import/import_invoice.dart';
+import '../../pdf_export/pdf_generator.dart';
+import '../../pdf_export/presentation/save_pdf_dialog.dart';
 import '../../settlement/presentation/summary_panel.dart';
 import '../../settlement/totals_provider.dart';
 import '../providers/transactions_provider.dart';
@@ -23,6 +28,7 @@ class TransactionListScreen extends ConsumerStatefulWidget {
 
 class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   bool _importing = false;
+  bool _generatingPdf = false;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +82,18 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                           },
                           icon: const Icon(Icons.add, size: 16),
                           label: const Text('Despesa'),
+                        ),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(backgroundColor: AppColors.sage500),
+                          onPressed: transactions.isEmpty || _generatingPdf ? null : _handleGeneratePdf,
+                          icon: _generatingPdf
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                          label: const Text('Gerar PDF'),
                         ),
                       ],
                     ),
@@ -184,6 +202,36 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         content: Text('${parsed.transactions.length} transações importadas'),
       ),
     );
+  }
+
+  Future<void> _handleGeneratePdf() async {
+    final transactions = ref.read(transactionsProvider);
+    final valid = transactions.where((t) => t.owner != Owner.ignorar && t.value > 0);
+    if (valid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Adicione pelo menos uma despesa válida antes de gerar o PDF.'),
+        ),
+      );
+      return;
+    }
+
+    final result = await showSavePdfDialog(context);
+    if (!mounted || result == null) return;
+
+    setState(() => _generatingPdf = true);
+    final totals = ref.read(totalsProvider);
+    final bytes = await generateSettlementPdf(
+      transactions: transactions,
+      totals: totals,
+      month: result.month,
+      year: result.year,
+    );
+    if (!mounted) return;
+    setState(() => _generatingPdf = false);
+
+    final monthName = monthsPt[result.month];
+    await Printing.sharePdf(bytes: bytes, filename: 'Acerto_${monthName}_${result.year}.pdf');
   }
 
   Future<bool?> _confirmReplaceOrAppend(int existingCount) {
