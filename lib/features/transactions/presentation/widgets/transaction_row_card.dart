@@ -4,19 +4,21 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/models/owner.dart';
 import '../../../../shared/models/transaction.dart';
 import '../../../../shared/utils/money.dart';
+import '../../../../shared/widgets/owner_pill.dart';
 import '../../owner_shared_sync.dart';
 
-/// A single transaction, editable inline: owner, shared flag and obs.
-/// Mirrors SortableRow in acertos/web/src/components/TransactionTable.tsx,
-/// adapted to a card layout for narrow mobile screens instead of a 12-column
-/// table.
+/// A single transaction, editable inline via owner pills + an obs field.
+/// Mirrors SortableRow in acertos/web/src/components/TransactionTable.tsx in
+/// spirit, restyled 2026-07-07 per a UI mockup: white cards (no per-owner
+/// tinted background), a segmented pill selector instead of a dropdown, and
+/// a constant lavender value color (owner is conveyed by the pills alone).
 ///
 /// StatefulWidget (not Stateless) so the `obs` TextEditingController is
 /// created once in initState — obs is only ever mutated through this field,
-/// so there's no external value to reactively resync against. A dropdown-
-/// list rebuild elsewhere (Riverpod watches the whole list) re-runs build()
-/// but preserves this State as long as the ValueKey(transaction.id) doesn't
-/// change, so the controller (and the user's cursor position) survives.
+/// so there's no external value to reactively resync against. A list rebuild
+/// elsewhere (Riverpod watches the whole list) re-runs build() but preserves
+/// this State as long as the ValueKey(transaction.id) doesn't change, so the
+/// controller (and the user's cursor position) survives.
 class TransactionRowCard extends StatefulWidget {
   const TransactionRowCard({
     super.key,
@@ -27,7 +29,12 @@ class TransactionRowCard extends StatefulWidget {
   });
 
   final Transaction transaction;
-  final int index;
+
+  /// Position in the (unfiltered) list, used only for drag-to-reorder. Null
+  /// when the row is rendered inside a filtered, non-reorderable list —
+  /// reordering a filtered subset has no unambiguous mapping back onto the
+  /// full list's order, so the drag handle is simply omitted then.
+  final int? index;
   final ValueChanged<Transaction> onUpdate;
   final ValueChanged<String> onDelete;
 
@@ -47,7 +54,7 @@ class _TransactionRowCardState extends State<TransactionRowCard> {
   @override
   Widget build(BuildContext context) {
     final t = widget.transaction;
-    final colors = ownerColors(t.owner);
+    final ignored = t.owner == Owner.ignorar;
     final description = t.expenseName.isNotEmpty ? t.expenseName : t.originalDescription;
     final subtitle = [
       t.datetime,
@@ -56,94 +63,106 @@ class _TransactionRowCardState extends State<TransactionRowCard> {
       if (t.installment.isNotEmpty) 'Parcela ${t.installment}',
     ].where((s) => s.isNotEmpty).join(' · ');
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      padding: const EdgeInsets.fromLTRB(12, 10, 4, 4),
-      decoration: BoxDecoration(
-        color: colors.bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: colors.accent, width: 4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  description.isEmpty ? '—' : description,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.charcoal800),
-                  overflow: TextOverflow.ellipsis,
+    return Opacity(
+      opacity: ignored ? 0.75 : 1,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.brandCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.surfaceVariant.withValues(alpha: 0.4)),
+          boxShadow: const [BoxShadow(color: Color(0x0A655D56), blurRadius: 12, offset: Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    description.isEmpty ? '—' : description,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: ignored ? AppColors.outline : AppColors.onSurface,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                displayValue(t.value),
-                style: TextStyle(fontWeight: FontWeight.w700, color: colors.text),
-              ),
-              ReorderableDragStartListener(
-                index: widget.index,
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Icon(Icons.drag_handle, size: 18, color: AppColors.charcoal400),
+                const SizedBox(width: 8),
+                Text(
+                  displayValue(t.value),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: ignored ? AppColors.outline : AppColors.lavender,
+                    decoration: ignored ? TextDecoration.lineThrough : null,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          if (subtitle.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.charcoal400)),
+                if (widget.index != null)
+                  ReorderableDragStartListener(
+                    index: widget.index!,
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 8, top: 4),
+                      child: Icon(Icons.drag_handle, size: 18, color: AppColors.outline),
+                    ),
+                  ),
+              ],
             ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: DropdownButtonFormField<Owner>(
-                  key: ValueKey('owner-${t.id}'),
-                  initialValue: t.owner,
+            if (subtitle.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(subtitle, style: const TextStyle(fontSize: 13, color: AppColors.outline)),
+              ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final owner in Owner.values)
+                  OwnerPill(
+                    owner: owner,
+                    active: t.owner == owner,
+                    onTap: () => widget.onUpdate(applyOwnerChange(t, owner)),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  color: AppColors.outline,
+                  tooltip: 'Remover',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => widget.onDelete(t.id),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TextField(
+                controller: _obsController,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: AppColors.onSurfaceVariant,
+                ),
+                decoration: const InputDecoration(
                   isDense: true,
-                  isExpanded: true,
-                  decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
-                  items: [
-                    for (final o in Owner.values)
-                      DropdownMenuItem(value: o, child: Text(o.label, style: const TextStyle(fontSize: 12))),
-                  ],
-                  onChanged: (newOwner) {
-                    if (newOwner == null) return;
-                    widget.onUpdate(applyOwnerChange(t, newOwner));
-                  },
+                  hintText: 'Adicionar observação...',
+                  hintStyle: TextStyle(fontStyle: FontStyle.italic, color: AppColors.outline),
+                  border: InputBorder.none,
                 ),
+                onChanged: (v) => widget.onUpdate(t.copyWith(obs: v)),
               ),
-              const SizedBox(width: 4),
-              Checkbox(
-                value: t.shared,
-                visualDensity: VisualDensity.compact,
-                onChanged: (checked) => widget.onUpdate(applySharedChange(t, checked ?? false)),
-              ),
-              const Text('Comp.', style: TextStyle(fontSize: 11, color: AppColors.charcoal400)),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18),
-                color: AppColors.charcoal400,
-                tooltip: 'Remover',
-                onPressed: () => widget.onDelete(t.id),
-              ),
-            ],
-          ),
-          TextField(
-            controller: _obsController,
-            style: const TextStyle(fontSize: 12),
-            decoration: const InputDecoration(
-              isDense: true,
-              hintText: 'Obs...',
-              border: InputBorder.none,
             ),
-            onChanged: (v) => widget.onUpdate(t.copyWith(obs: v)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import 'core/navigation/app_shell.dart';
 import 'core/theme/app_theme.dart';
-import 'features/transactions/presentation/transaction_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +19,7 @@ class AcertosApp extends StatelessWidget {
     return MaterialApp(
       title: 'Acertos',
       theme: AppTheme.light(),
-      home: const TransactionListScreen(),
+      home: const AppShell(),
     );
   }
 }
