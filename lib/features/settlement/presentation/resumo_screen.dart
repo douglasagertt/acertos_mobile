@@ -5,7 +5,6 @@ import '../../../core/constants/months_pt.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/utils/money.dart';
 import '../../pdf_export/generate_and_share_flow.dart';
-import '../../transactions/providers/transactions_provider.dart';
 import '../totals_provider.dart';
 
 /// The "Resumo" tab — a dedicated settlement summary screen, added
@@ -85,8 +84,7 @@ class _ResumoScreenState extends ConsumerState<ResumoScreen> {
                       ? null
                       : () => generateAndShareSettlementPdf(
                           context: context,
-                          transactions: ref.read(transactionsProvider),
-                          totals: ref.read(totalsProvider),
+                          ref: ref,
                           onLoadingChanged: (loading) => setState(() => _generatingPdf = loading),
                         ),
                   icon: _generatingPdf
@@ -96,7 +94,7 @@ class _ResumoScreenState extends ConsumerState<ResumoScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.lavender),
                         )
                       : const Icon(Icons.picture_as_pdf_outlined),
-                  label: const Text('Gerar PDF do Acerto', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  label: const Text('Salvar e gerar PDF', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],

@@ -7,7 +7,6 @@ import '../../../shared/models/owner.dart';
 import '../../../shared/widgets/owner_pill.dart';
 import '../../invoice_import/import_invoice.dart';
 import '../../pdf_export/generate_and_share_flow.dart';
-import '../../settlement/totals_provider.dart';
 import '../providers/transactions_provider.dart';
 import 'add_expense_dialog.dart';
 import 'widgets/transaction_row_card.dart';
@@ -102,8 +101,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                         ? null
                         : () => generateAndShareSettlementPdf(
                             context: context,
-                            transactions: ref.read(transactionsProvider),
-                            totals: ref.read(totalsProvider),
+                            ref: ref,
                             onLoadingChanged: (loading) => setState(() => _generatingPdf = loading),
                           ),
                     icon: _generatingPdf
@@ -113,7 +111,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                    label: const Text('Gerar PDF'),
+                    label: const Text('Salvar e gerar PDF'),
                   ),
                   if (transactions.isNotEmpty) ...[
                     const SizedBox(height: 24),

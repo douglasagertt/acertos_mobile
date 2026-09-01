@@ -13,3 +13,7 @@ const monthsPt = <int, String>{
   11: 'Novembro',
   12: 'Dezembro',
 };
+
+/// The Portuguese month name used in file names and acerto titles.
+/// Empty for a month outside 1-12, which the UI never produces.
+String monthNameOf(int month) => monthsPt[month] ?? '';

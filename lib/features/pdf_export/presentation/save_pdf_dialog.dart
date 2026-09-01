@@ -11,8 +11,9 @@ class SavePdfResult {
   final int year;
 }
 
-/// Shows the "generate settlement PDF" bottom sheet, mirroring
-/// `showAddExpenseDialog`'s presentation and Douglas's bottom-sheet mockup.
+/// Shows the "close the month" bottom sheet, mirroring `showAddExpenseDialog`'s
+/// presentation and Douglas's bottom-sheet mockup. The month/year picked here
+/// names both the PDF and the acerto saved to the Acertos tab.
 Future<SavePdfResult?> showSavePdfDialog(BuildContext context) {
   return showModalBottomSheet<SavePdfResult>(
     context: context,
@@ -48,12 +49,12 @@ class _SavePdfDialogState extends State<SavePdfDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Gerar PDF do acerto',
+                'Fechar o acerto',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.onSurface),
               ),
               const SizedBox(height: 4),
               const Text(
-                'Informe o mês e ano para nomear o arquivo.',
+                'O acerto fica salvo na aba Acertos e o PDF é gerado com esse mês e ano.',
                 style: TextStyle(fontSize: 13, color: AppColors.outline),
               ),
               const SizedBox(height: 20),
@@ -84,11 +85,15 @@ class _SavePdfDialogState extends State<SavePdfDialog> {
                 ],
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              // Wrap, not Row: at narrow widths (a 320-360pt phone, or a large
+              // font scale) these two labels don't fit on one line, and a Row
+              // would overflow instead of letting them stack.
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-                  const SizedBox(width: 8),
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.salvia,
@@ -97,7 +102,7 @@ class _SavePdfDialogState extends State<SavePdfDialog> {
                     ),
                     onPressed: () => Navigator.of(context).pop(SavePdfResult(_month, _year)),
                     icon: const Icon(Icons.ios_share, size: 18),
-                    label: const Text('Gerar e compartilhar'),
+                    label: const Text('Salvar e compartilhar'),
                   ),
                 ],
               ),

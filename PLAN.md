@@ -263,11 +263,220 @@ single-screen until now).
   fabricated) and any interactive "mark as paid" affordance (the "Acerto pendente de
   transferência" status line is kept as a static, always-true statement — nothing in this app
   tracks payment status, so it's honest as a permanent label, just not as a toggleable feature).
+- **Bug corrigido 2026-09-01 (device real)**: os cards bento mostravam `totals.bruna`/
+  `totals.douglas` sob o rótulo "Gastos Individuais", mas esses campos (herdados de
+  `calculator.py`, onde o painel web os rotulava "Cartão Bruna"/"Cartão Douglas") já incluem
+  metade do compartilhado — então o card do Douglas exibia exatamente o mesmo número do card
+  "Douglas deve pagar" logo abaixo, por definição. `Totals` ganhou `brunaIndividual`/
+  `douglasIndividual`, acumulados direto das transações exclusivas em `calculateTotals()` (não
+  derivados por `bruna - sharedHalf`, que herdaria a deriva de centavo do arredondamento
+  independente das metades). Os campos originais e o PDF exportado ficam inalterados.
+
 - **`generateAndShareSettlementPdf`** (`lib/features/pdf_export/generate_and_share_flow.dart`):
   the validate → month/year dialog → generate → share logic was extracted out of
   `transaction_list_screen.dart` into a shared function once the Resumo screen needed the exact
   same flow behind its own button — avoids duplicating the validation rule and dialog wiring
   between two screens.
+
+## Persistence plan (Phase 1 step 8) — written and implemented 2026-09-01
+
+### The problem
+
+Session state lives only in `TransactionsNotifier` (memory). Closing the app mid-reconciliation
+loses everything — with an 80-90 line invoice that is an hour of owner-pill tapping gone. Douglas
+asked for a "salvar rascunho" button, a "salvar versão final" button, and a way to reopen past
+acertos.
+
+### One correction to the request, then build it as asked
+
+A "salvar rascunho" button alone does **not** fix the data loss: Android can kill the process at
+any moment, and whatever was tapped since the last press is still gone. So the plan splits the ask
+in two:
+
+- **Autosave (invisible, no button)** — every change to the transaction list is written to disk.
+  This is what actually stops the data loss, and it needs no discipline from the user.
+- **One button, not two** — the final save names the session (month/year), records it in the
+  Acertos list and generates the PDF.
+
+**"Salvar rascunho" was dropped (Douglas, 2026-09-01)**: its only real use was parking one month
+half-done to start another, and they never reconcile two months at the same time — one is always
+closed before the next starts. With a single working session, autosave already covers everything
+that button would have done, so it would be a control that does nothing. That also means
+**every record in the history is a closed acerto** — there is no `status` field to carry.
+
+### Files on disk
+
+Under `getApplicationDocumentsDirectory()/acertos/` (`path_provider` is already a transitive
+dependency via `printing`/`pdfrx` — it only needs promoting to a direct one in `pubspec.yaml`):
+
+```
+acertos/
+  session.json          # the live working session, autosaved
+  history.json          # index of saved acertos (cheap to list)
+  records/<id>.json     # one saved acerto's full transaction list
+```
+
+`session.json`:
+
+```json
+{ "schemaVersion": 1, "updatedAt": "...", "openRecordId": "<id|null>", "transactions": [ ... ] }
+```
+
+`openRecordId` remembers which saved acerto the session was opened from, so saving again updates
+that record instead of creating a duplicate.
+
+`history.json` — a list of records, mirroring `history.py`'s shape plus what a mobile list needs:
+
+```json
+{ "schemaVersion": 1, "id": "uuid", "month": 8, "year": 2026, "monthName": "Agosto",
+  "createdAt": "...", "updatedAt": "...",
+  "transactionCount": 89, "grandTotal": 15314.52, "douglasToPay": 7154.20 }
+```
+
+The two totals are denormalized into the index purely so the history list renders without opening
+every record file; they are recomputed (never trusted) whenever a record is opened.
+
+### Serialization
+
+`Transaction.toJson()`/`fromJson()` on the model itself — no separate DTO layer, per the project's
+"menos camadas" philosophy. Keys are the field names; `owner` is stored as its Portuguese label
+(`Owner.label`/`Owner.fromLabel` already document themselves as the wire/storage value, which
+keeps the JSON readable and identical in meaning to the Python/web side). `Totals` is derived, so
+it is never serialized as session state.
+
+### Storage layer
+
+One plain class, `lib/features/history/acertos_store.dart`, constructed with the base
+`Directory` (injectable, so tests point it at `Directory.systemTemp`):
+
+- `Future<SessionSnapshot> loadSession()` / `Future<void> saveSession(...)`
+- `Future<List<AcertoRecord>> listRecords()` — sorted year/month desc, like `history.list_all()`
+- `Future<AcertoRecord> saveRecord(...)` — add-or-update on (month, year), like `add_or_update()`
+- `Future<List<Transaction>> loadRecord(String id)` / `Future<void> deleteRecord(String id)`
+
+Every write is atomic: write `<file>.tmp`, then `rename()` over the target, so a process kill
+mid-write can never leave a half-written JSON. Every read is wrapped: a corrupt or partial file is
+moved aside to `<file>.bak` and treated as empty, surfacing a warning rather than throwing — same
+"non-fatal problems become warnings" convention `pdf_reader.dart` already follows.
+
+### Riverpod wiring
+
+- `main()` already awaits `pdfrxFlutterInitialize()`; it also resolves the documents directory,
+  builds the store, and loads `session.json` **before** `runApp`. The restored list is injected
+  through a `ProviderScope` override, so there is no loading state and no empty-then-populated
+  flash on startup.
+- `TransactionsNotifier.build()` returns the restored list and calls `ref.listenSelf(...)`
+  (available in riverpod 3.3.2) to schedule a debounced save (~400 ms) on every state change.
+  Because every mutation goes through the state setter, `add`/`update`/`remove`/`reorder`/
+  `replaceAll`/`clear` need no changes at all.
+- An `AppLifecycleListener` flushes the pending save on `paused` — on Android the process is
+  killed after `onPause`, so without this flush a swipe-away right after an edit still loses it.
+- History reads are a `FutureProvider` invalidated after each save/delete, matching the project's
+  stated Riverpod convention.
+
+### UI
+
+- **No new button on the Home toolbar.** It keeps the two rows it has today
+  (`Importar Fatura | Despesa`, then the full-width PDF button).
+- **The save is the existing PDF flow, extended.** `generateAndShareSettlementPdf()` is already
+  the single entry point behind both the Home and Resumo buttons, so persistence goes there:
+  month/year dialog -> overwrite check -> generate bytes -> save the record -> share. Generation
+  failing therefore records nothing; sharing failing still keeps the record.
+- **The button label gains the saving.** "Gerar PDF" (Home) and "Gerar PDF do Acerto" (Resumo)
+  both become **"Salvar e gerar PDF"** — the button now closes the month, and the label should say
+  so rather than leaving the recording invisible.
+- **A third `AppShell` tab, "Acertos"** (`Icons.history`), listing saved acertos as cards:
+  `Agosto/2026`, "atualizado em", and the "Douglas deve pagar" value. Tapping opens a sheet with
+  **Abrir**, **Gerar PDF novamente**, **Excluir**. A third flat tab still doesn't justify
+  `go_router` — the `IndexedStack` shell already handles it.
+
+### Rules to honor
+
+- Saving onto an existing (month, year) asks to overwrite, like `main_window.py`'s `save_settlement`.
+- Opening a saved acerto while the current session has unsaved content asks first, then replaces
+  the list and sets `openRecordId`.
+- "Limpar" clears the session and `session.json` — never the history.
+- Deleting a record asks, then removes both the index entry and `records/<id>.json`.
+
+### Deviations from `history.py`, on purpose
+
+- The Python/desktop history stores **only a `pdf_path`**; "opening" a past acerto there means
+  opening a PDF file. Douglas asked to *reopen* acertos, so each record stores its **transactions**
+  — that is the source of truth, and it makes reopening, editing and regenerating possible.
+- **The generated PDF is not stored.** It is regenerated from the stored transactions when
+  re-sharing: no stale or missing files to handle, storage stays small, and `Printing.sharePdf()`
+  takes bytes directly with no temp-file wiring.
+
+### Risks and edge cases
+
+- The app documents directory is private: uninstalling wipes the history, and saved PDFs never
+  appear in Files/Downloads. That is the open question already at the bottom of this plan; sharing
+  stays the way a PDF leaves the app.
+- `schemaVersion: 1` is written from day one so a future field can migrate instead of guess.
+- Phase 2 (sync) will need these paths namespaced per user — the `entre_dois` precedent noted at
+  the top of this plan. Do it *then*, but don't design a global-key shape now that fights it.
+- Every totals value in `history.json` is a cache. Recompute on open; never settle from the index.
+
+### Tests
+
+- `toJson`/`fromJson` round-trip: all four owners, negative values, empty strings, accented text.
+- Store tests against `Directory.systemTemp`: save/load, missing file, corrupt JSON -> empty +
+  `.bak` kept, no `.tmp` left behind, add-or-update not duplicating a (month, year), delete
+  removing both index entry and record file.
+- Widget: a container seeded from a restored session renders the list; the history screen with
+  records and empty; opening a record replaces the list.
+- **The real acceptance test is on the device**: fill the list, swipe the app away from recents,
+  reopen — everything is still there. Widget tests cannot exercise a process kill.
+
+### What actually got built (2026-09-01)
+
+Everything above, in the six planned steps, plus these findings:
+
+- **`listenSelf` is a method on `Notifier`, not on `ref`** in riverpod 3.3.2 (it lives in
+  `notifier_provider.dart`, and `ref.listenSelf` doesn't compile). Autosave hangs off
+  `listenSelf((_, _) => _scheduleSave())` inside `build()`.
+- **`_scheduleSave()` returns early when no store is configured.** Without that, every widget test
+  ended with `A Timer is still pending even after the widget tree was disposed` — the debounce
+  timer outliving the test. The early return also states the intent: no store means no
+  persistence, so there is nothing to schedule.
+- **Widget tests can't await real `dart:io`.** `flutter_test` runs the test body in a fake-async
+  zone where a real file future never completes — a screen awaiting one hangs until
+  `pumpAndSettle` times out, and `tester.runAsync` does *not* rescue a future the widget itself is
+  already awaiting (verified: the continuation never resumes). So `acertos_screen_test.dart` runs
+  against a `FakeAcertosStore extends AcertosStore` that answers from memory, while the real file
+  behaviour is covered by `acertos_store_test.dart`'s plain (non-widget) tests against
+  `Directory.systemTemp`. Worth remembering for any future screen that touches the filesystem.
+- **`AcertosStore` methods are plain and overridable on purpose** — that is what makes the
+  in-memory double above a three-line class instead of an interface plus two implementations.
+- **Button and dialog copy**: Home and Resumo now read "Salvar e gerar PDF"; the bottom sheet is
+  titled "Fechar o acerto", says the acerto will be saved to the Acertos tab, and its action reads
+  "Salvar e compartilhar".
+- **iOS parity**: nothing platform-specific was written — `path_provider` (iOS 12+, project targets
+  iOS 13) plus `dart:io`, with the same code path on both. Not compiled on iOS: no macOS machine
+  here, so the iOS build itself is unverified.
+- **Verified**: full suite green (82 tests + the pdfium fixture test with `PDFIUM_PATH`) and
+  `flutter build apk --debug` succeeds, which is what exercises `path_provider`'s Android plugin
+  registration. The Linux desktop target could *not* be run: `flutter run -d linux` fails in
+  CMake's install step with `file INSTALL cannot find .../bundle/lib/libpdfium.so` — a pdfrx
+  native-assets problem on this machine, unrelated to persistence, and copying the .so in by hand
+  doesn't survive the next build. Desktop screenshots are therefore not available as a check for
+  this step; on-device is.
+
+### Delivery steps (each one shippable and testable on its own)
+
+1. `Transaction` JSON round-trip + tests. (S)
+2. `AcertosStore` with atomic writes and corrupt-file handling + temp-dir tests. (M)
+3. Autosave and restore-on-boot. **This alone closes the data-loss complaint.** (M)
+4. Save on close: persist the record inside `generateAndShareSettlementPdf`, with the overwrite
+   prompt, and relabel the button. (S)
+5. The "Acertos" tab: list, open, regenerate PDF, delete. (M)
+6. Polish: unsaved-changes guard, empty state, corrupt-session warning surface. (S)
+
+### Decided 2026-09-01
+
+- Generating the PDF *is* closing the acerto — one flow, one button, no separate "salvar versão
+  final" action beside it.
+- No draft button (see above).
 
 ## Roadmap
 
@@ -330,7 +539,9 @@ single-screen until now).
    and the ÷ symbol are Latin-1 and render fine as-is). Verified end-to-end on the real Android
    phone: filled a manual expense, tapped "Gerar PDF", confirmed month/year, and the native Android
    share sheet opened with the correctly-named `Acerto_Julho_2026.pdf`.
-8. History: local list of past settlements, regenerate/re-share old PDFs.
+8. ~~Persistence: autosave the working session, save closed acertos, reopen past ones~~ — done
+   (2026-09-01). Built exactly as the "Persistence plan" section below describes; that section
+   also records what was learned while implementing it.
 9. Polish pass: empty states, loading states, error handling for malformed PDFs.
 
 **Phase 2 — Sync (not started until Phase 1 is in daily use)**
