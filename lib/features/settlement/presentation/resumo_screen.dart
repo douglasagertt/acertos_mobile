@@ -58,9 +58,13 @@ class _ResumoScreenState extends ConsumerState<ResumoScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _PersonCard(name: 'Bruna', value: totals.bruna, color: AppColors.lavender)),
+                  Expanded(
+                    child: _PersonCard(name: 'Bruna', value: totals.brunaIndividual, color: AppColors.lavender),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: _PersonCard(name: 'Douglas', value: totals.douglas, color: AppColors.salvia)),
+                  Expanded(
+                    child: _PersonCard(name: 'Douglas', value: totals.douglasIndividual, color: AppColors.salvia),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -144,6 +148,10 @@ class _TotalGeralCard extends StatelessWidget {
   }
 }
 
+/// One person's bento card. [value] is the *exclusive* spend ("Gastos
+/// Individuais") — deliberately not `Totals.bruna`/`Totals.douglas`, which
+/// already fold in half the shared total and would make Douglas's card a
+/// duplicate of the "Douglas deve pagar" result below it.
 class _PersonCard extends StatelessWidget {
   const _PersonCard({required this.name, required this.value, required this.color});
 

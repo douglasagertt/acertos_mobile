@@ -113,6 +113,105 @@ void main() {
       );
       expect(totals.grandTotal, closeTo(expectedGrandTotal, 0.01));
     });
+
+    test('individual totals exclude the shared half', () {
+      final list = [
+        Transaction(owner: Owner.bruna, value: 135.85),
+        Transaction(owner: Owner.douglas, value: 56.26),
+        Transaction(owner: Owner.compartilhado, value: 90.00),
+        Transaction(owner: Owner.bruna, shared: true, value: 24.18),
+        Transaction(owner: Owner.ignorar, value: 500.0),
+      ];
+      final totals = calculateTotals(list);
+
+      expect(totals.brunaIndividual, closeTo(135.85, 0.01));
+      expect(totals.douglasIndividual, closeTo(56.26, 0.01));
+      // Each person's attributed total is their individual spend plus their
+      // half of the shared pot — which is exactly why the Resumo screen's
+      // "Gastos Individuais" cards can't use `bruna`/`douglas`.
+      expect(totals.bruna, closeTo(totals.brunaIndividual + totals.sharedHalf, 0.01));
+      expect(totals.douglas, closeTo(totals.douglasIndividual + totals.sharedHalf, 0.01));
+      expect(totals.douglasToPay, closeTo(totals.douglasIndividual + totals.sharedHalf, 0.01));
+    });
+  });
+
+  group('degenerate inputs', () {
+    test('an empty list is all zeros, not a crash', () {
+      final totals = calculateTotals([]);
+
+      expect(totals.bruna, 0);
+      expect(totals.douglas, 0);
+      expect(totals.brunaIndividual, 0);
+      expect(totals.douglasIndividual, 0);
+      expect(totals.sharedTotal, 0);
+      expect(totals.sharedHalf, 0);
+      expect(totals.ignored, 0);
+      expect(totals.grandTotal, 0);
+      expect(totals.douglasToPay, 0);
+    });
+
+    test('when everything is ignored, only the ignored bucket has a value', () {
+      final totals = calculateTotals([
+        Transaction(owner: Owner.ignorar, value: 500.0),
+        Transaction(owner: Owner.ignorar, value: -14032.90),
+      ]);
+
+      expect(totals.ignored, closeTo(-13532.90, 0.01));
+      expect(totals.grandTotal, 0);
+      expect(totals.douglasToPay, 0);
+      expect(totals.brunaIndividual, 0);
+    });
+
+    test('an ignored row never reaches the individual totals', () {
+      final totals = calculateTotals([
+        Transaction(owner: Owner.bruna, value: 100.0),
+        Transaction(owner: Owner.ignorar, value: 999.0),
+      ]);
+
+      expect(totals.brunaIndividual, 100.0);
+      expect(totals.bruna, 100.0);
+      expect(totals.ignored, 999.0);
+    });
+
+    test('a negative shared value splits into two negative halves', () {
+      final totals = calculateTotals([Transaction(owner: Owner.compartilhado, shared: true, value: -90.0)]);
+
+      expect(totals.sharedTotal, -90.0);
+      expect(totals.sharedHalf, -45.0);
+      expect(totals.bruna, -45.0);
+      expect(totals.douglas, -45.0);
+      expect(totals.douglasToPay, -45.0);
+      expect(totals.douglasIndividual, 0);
+    });
+  });
+
+  group('what counts as shared', () {
+    test('owner Compartilhado alone is enough, even without the shared flag', () {
+      final totals = calculateTotals([Transaction(owner: Owner.compartilhado, value: 90.0)]);
+
+      expect(totals.sharedTotal, 90.0);
+      expect(totals.bruna, 45.0);
+      expect(totals.douglas, 45.0);
+    });
+
+    test('the shared flag alone is enough, whoever the owner is', () {
+      final asBruna = calculateTotals([Transaction(owner: Owner.bruna, shared: true, value: 90.0)]);
+      final asDouglas = calculateTotals([Transaction(owner: Owner.douglas, shared: true, value: 90.0)]);
+
+      for (final totals in [asBruna, asDouglas]) {
+        expect(totals.sharedTotal, 90.0);
+        expect(totals.brunaIndividual, 0);
+        expect(totals.douglasIndividual, 0);
+        expect(totals.douglasToPay, 45.0);
+      }
+    });
+
+    test('an ignored row wins over the shared flag', () {
+      final totals = calculateTotals([Transaction(owner: Owner.ignorar, shared: true, value: 90.0)]);
+
+      expect(totals.sharedTotal, 0);
+      expect(totals.ignored, 90.0);
+    });
   });
 
   group('delete-row — removing a transaction subtracts its value from the right total', () {

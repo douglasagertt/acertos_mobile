@@ -9,6 +9,8 @@ import 'package:acertos_mobile/shared/utils/money.dart';
 Totals calculateTotals(List<Transaction> transactions) {
   var bruna = 0.0;
   var douglas = 0.0;
+  var brunaIndividual = 0.0;
+  var douglasIndividual = 0.0;
   var sharedTotal = 0.0;
   var ignored = 0.0;
 
@@ -24,8 +26,10 @@ Totals calculateTotals(List<Transaction> transactions) {
       douglas += round2(v / 2);
     } else if (t.owner == Owner.bruna) {
       bruna += v;
+      brunaIndividual += v;
     } else if (t.owner == Owner.douglas) {
       douglas += v;
+      douglasIndividual += v;
     }
   }
 
@@ -35,6 +39,8 @@ Totals calculateTotals(List<Transaction> transactions) {
   return Totals(
     bruna: round2(bruna),
     douglas: round2(douglas),
+    brunaIndividual: round2(brunaIndividual),
+    douglasIndividual: round2(douglasIndividual),
     sharedTotal: round2(sharedTotal),
     sharedHalf: sharedHalf,
     douglasToPay: douglasToPay,

@@ -24,17 +24,18 @@ void main() {
     expect(find.text('Bruna'), findsOneWidget);
     expect(find.text('Douglas'), findsOneWidget);
 
-    // Bruna: 135.85 + 45.00 (half of 90) = 180.85.
-    expect(find.text('R\$ 180,85'), findsOneWidget);
-    // Douglas: 56.26 + 45.00 = 101.26 — appears twice, once as his own card
-    // total and once as "Douglas deve pagar" (douglasToPay is defined as
-    // exactly the douglas total, so these are always the same number).
-    expect(find.text('R\$ 101,26'), findsNWidgets(2));
+    // The person cards show *individual* spend only, without the shared
+    // half — otherwise Douglas's card would just restate "Douglas deve
+    // pagar" (which is his individual spend + half the shared).
+    expect(find.text('R\$ 135,85'), findsOneWidget); // Bruna individual
+    expect(find.text('R\$ 56,26'), findsOneWidget); // Douglas individual
+    // Douglas deve pagar: 56.26 + 45.00 (half of 90) = 101.26.
     expect(tester.widget<Text>(find.byKey(const Key('resumo-douglas-to-pay'))).data, 'R\$ 101,26');
 
     expect(find.text('R\$ 90,00'), findsOneWidget); // Compartilhado total
     expect(find.text('R\$ 45,00'), findsOneWidget); // Cada um
     expect(find.text('R\$ 282,11'), findsOneWidget); // grand total (180.85 + 101.26)
+    expect(find.text('R\$ 180,85'), findsNothing); // Bruna's card is not her total-with-shared
   });
 
   testWidgets('shows zeros with no transactions', (tester) async {
