@@ -582,6 +582,45 @@ shared Linux desktop) and `adb shell screencap`, not by widget tests or desktop 
 manual-add-expense flow (open dialog → fill fields → submit → edit owner incl. the longest label
 → auto-check shared → delete) verified working end-to-end on the physical device after the fixes.
 
+## Test coverage pass (2026-09-01)
+
+82 -> 143 tests, 83.6% -> 92.6% line coverage (`flutter test --coverage`). What the new tests
+turned up, in the order they were found:
+
+1. **`Transaction.fromJson` / `AcertoRecord.fromJson` threw on a field of the wrong type.** One
+   number where a String was expected took down the *entire* session or history load with a
+   TypeError — and the doc comment claimed the opposite. Fixed with the tolerant readers in
+   `lib/shared/utils/json.dart`; every field now degrades to its default.
+2. **`AcertosStore.loadSession` threw on valid JSON of the wrong shape** (`transactions` holding
+   an object instead of a list). The `.bak` rescue only covered *unparseable* JSON, so this
+   escaped as an exception, `main()` caught it and blamed "storage unavailable", and it would
+   repeat on every launch — the session silently lost each time. Fixed.
+3. **Closing the month could hang on its spinner.** If PDF generation or the record write threw,
+   `onLoadingChanged(false)` never ran and nothing reached the screen: the button stayed disabled
+   and spinning, with no way to know the acerto hadn't been saved. Now failures are reported, and
+   a failed *share* says the acerto was saved anyway.
+4. **The "is this month already saved?" lookup sat outside the guard**, so a store failure there
+   escaped the flow entirely. Found by the new failure-path test, fixed by guarding it.
+5. **The month/year sheet overflowed horizontally** ("A RenderFlex overflowed by 155 pixels") —
+   its action row was a `Row` with two non-shrinking labels. Never caught because the dialog had
+   3% coverage and no test had ever opened it. Now a `Wrap`, with a 320pt-wide regression test.
+   Note the 155px number comes from the test font, which is wider than Plus Jakarta Sans — on a
+   real 400pt phone it fits; at 320pt or a large accessibility font scale it would not.
+
+Two behaviours pinned by tests but deliberately **not** changed, since both are faithful to the
+Python original and changing them is a product decision:
+
+- **The parser's skip list is a substring match**, so any transaction whose description contains
+  `"de 6"` is silently dropped — the entry exists to kill the "Página X de 6" footer. It reaches
+  further than it looks: `"Cinema de 60 Salas"` contains `"de 6"` too. Same semantics as
+  `SKIP_LINES` in `pdf_reader.py`.
+- **`Owner.fromLabel` falls back to Bruna** for an unknown label, so a row with an unreadable
+  owner still loads (and shows up in the list to be re-assigned) instead of disappearing.
+
+What is still uncovered is what unit tests can't reach: the theme's colour constants, pdfrx text
+extraction (needs the native engine), and the file-picker half of the import flow — that one is
+validated on-device against a real invoice instead.
+
 ## Testing strategy
 
 - Unit-test `calculate_totals()` directly against the same scenarios the Playwright e2e suite
