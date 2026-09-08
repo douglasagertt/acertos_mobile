@@ -30,8 +30,6 @@
 	<string>Precisamos de acesso à câmera para você tirar fotos e anexá-las ao app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Precisamos de acesso à sua galeria para você selecionar fotos e anexá-las ao app.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Precisamos de acesso à sua localização para melhorar sua experiência no app.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
